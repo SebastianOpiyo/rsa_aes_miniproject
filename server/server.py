@@ -2,12 +2,14 @@ import flask
 import rsa
 import aes
 from jinja2 import Template
-from flask_wtf import CsrfProtect
+from flask_wtf.csrf  import CSRFProtect
 
 
 app = flask.Flask(__name__)
 
-CsrfProtect(app)
+app.secret_key = "your_secret_key"
+
+CSRFProtect(app)
 
 @app.route("/")
 def index():
