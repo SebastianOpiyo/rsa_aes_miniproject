@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "rsa-aes-miniproject"
+version = "0.1.0"
+description = "An implementation of rsa and aes ciphers in a tcp chat application."
+authors = ["SebastianOpiyo"]
+license = "MIT"
+readme = "README.md"
+packages = [{include = "rsa_aes_miniproject"}]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+aes = "^1.2.0"
+rsa3 = "^3.0.0.post20201106"
+Jinja2 = "^3.1.2"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
