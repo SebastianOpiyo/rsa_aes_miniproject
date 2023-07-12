@@ -21,8 +21,8 @@ def disconnect():
 
 @app.route('/')
 def index():
-    if 'username' not in session:
-        return render_template('login.html')
+    # if 'username' not in session:
+    #     return render_template('login.html')
     return render_template('index.html')
 
 @app.route('/login', methods=['GET', 'POST'])
