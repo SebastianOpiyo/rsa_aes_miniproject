@@ -1,34 +1,26 @@
-<!DOCTYPE html>
-<html>
+{% extends "base.html" %}
+
+{% block content %}
+<html lang="en">
 <head>
-  <title>RSA & AES Chat App</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RSA & AES Chat App Demo</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='landing_page.css') }}">
 </head>
 <body>
-  <h1>RSA & AES Chat App</h1>
-  <!-- Design and develop a home page -->
-
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.4.1/socket.io.min.js"></script>
-  <!-- <script>
-    var socket = io();
-
-    socket.on('connect', function() {
-      console.log('Connected to the chat app');
-    });
-
-    socket.on('message', function(data) {
-      console.log('Received message:', data);
-      document.getElementById('messages').innerHTML += data['message'] + '<br>';
-    });
-
-    function sendMessage() {
-      var message = document.getElementById('message').value;
-      socket.emit('message', {
-        'message': message
-      });
-    }
-
-    document.getElementById('submit').onclick = sendMessage;
-  </script> -->
-  <div id="messages"></div>
+    <header>
+        <h1>RSA & AES Chat App Demo</h1>
+        <p>Connect with your friends and family in real time in a secure way.</p>
+    </header>
+    <main>
+        <div>
+            <button style="align-items: center;"><a href="{{ url_for('login') }}" class="btn btn-primary" style="text-transform: none; text-decoration: none;">Login</a></button>
+        </div>
+    </main>
+    <footer>
+        <p>Copyright &copy; 2023</p>
+    </footer>
 </body>
 </html>
+{% endblock %}

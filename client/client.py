@@ -1,6 +1,7 @@
-from flask import Flask, render_template, request, session
+from flask import Flask, render_template, request, session, flash
 from jinja2 import Template
 from flask_wtf.csrf  import CSRFProtect
+import requests
 
 app = Flask(__name__)
 
@@ -12,25 +13,35 @@ CSRFProtect(app)
 def connect():
     if 'username' not in session:
         return render_template('login.html')
-    return 'You are connected!'
+    return flash("Connected successfuly!")
 
 @app.route('/disconnect')
 def disconnect():
     session.pop('username', None)
-    return 'You have been disconnected.'
+    return flash('You have been disconnected.')
 
 @app.route('/')
 def index():
-    # if 'username' not in session:
-    #     return render_template('login.html')
+    flash("Click Login Button to Continue.")
     return render_template('index.html')
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
         username = request.form['username']
-        session['username'] = username
-        return redirect('/')
+        password = request.form['password']
+
+        # Make a request to the login api
+        response = requests.post('http://localhost:8000/login', json={'username': username, 'password': password})
+
+        # If the request is successful, set the username in the session
+        if response.status_code == 200:
+            session['username'] = username
+            return redirect('/chat')
+        # Else if the request is not successful, display an error message.
+        else:
+            error = "Invalid username or password."
+            return render_template('login.html', error=error)
     return render_template('login.html')
 
 @app.route('/chat')
