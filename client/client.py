@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, session, flash
+from flask import Flask, render_template, request, session, flash, redirect
 from jinja2 import Template
 from flask_wtf.csrf  import CSRFProtect
 import requests
@@ -48,7 +48,18 @@ def login():
 def chat():
     if 'username' not in session:
         return render_template('login.html')
-    return render_template('chat.html')
+    
+    # We make a request to the chat API
+    response = requests.get('http://localhost:5000/chat', params={'username': session['username']})
+
+    # Upon successful request, get the chat messages
+    if response.status_code == 200:
+        chat_messages = response.json()
+    else:
+        flash('Error: There are no messages or the backend services is down.')
+        chat_messages = []
+    return render_template('chat.html', chat_messages= chat_messages)
+
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
