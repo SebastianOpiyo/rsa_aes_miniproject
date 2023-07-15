@@ -16,7 +16,9 @@ def index():
     """
     This is the home page of the chat application.
     """
-    return flask.render_template("index.html")
+    message = "You are looking for a secure chat app? Well our RSA and AES secure chat app will do\
+    just fine fo you."
+    return flask.jsonify({"homecontent":message})
 
 @app.route("/login", methods=["POST"])
 def login():
@@ -80,4 +82,4 @@ def disconnect():
     return flask.jsonify({"success": True})
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=8000)
+    app.run(debug=True, host="0.0.0.0", port=8000)

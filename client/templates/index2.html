@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>RSA & AES Chat App</title>
+</head>
+<body>
+  <h1>RSA & AES Chat App</h1>
+  <!-- Design and develop a home page -->
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.4.1/socket.io.min.js"></script>
+  <!-- <script>
+    var socket = io();
+
+    socket.on('connect', function() {
+      console.log('Connected to the chat app');
+    });
+
+    socket.on('message', function(data) {
+      console.log('Received message:', data);
+      document.getElementById('messages').innerHTML += data['message'] + '<br>';
+    });
+
+    function sendMessage() {
+      var message = document.getElementById('message').value;
+      socket.emit('message', {
+        'message': message
+      });
+    }
+
+    document.getElementById('submit').onclick = sendMessage;
+  </script> -->
+  <div id="messages"></div>
+</body>
+</html>
