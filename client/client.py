@@ -1,7 +1,8 @@
-from flask import Flask, render_template, request, session, flash
+from flask import Flask, render_template, request, session, flash, redirect
 from jinja2 import Template
 from flask_wtf.csrf  import CSRFProtect
 import requests
+from time import datetime
 
 app = Flask(__name__)
 
@@ -37,18 +38,33 @@ def login():
         # If the request is successful, set the username in the session
         if response.status_code == 200:
             session['username'] = username
-            return redirect('/chat')
+            return render_template('/chat')
         # Else if the request is not successful, display an error message.
         else:
             error = "Invalid username or password."
             return render_template('login.html', error=error)
     return render_template('login.html')
 
+
 @app.route('/chat')
 def chat():
     if 'username' not in session:
         return render_template('login.html')
-    return render_template('chat.html')
+    
+    # We make a request to the chat API
+    response = requests.get('http://localhost:5000/chat', params={'username': session['username']})
+
+    # Upon successful request, get the chat messages
+    if response.status_code == 200:
+        chat_messages = response.json()
+        for message in chat_messages:
+            message['sender'] = session['username']
+            message['timestamp'] = datetime.utcnow()
+    else:
+        flash('Error: There are no messages or the backend services is down.')
+        chat_messages = []
+    return render_template('chat.html', chat_messages= chat_messages)
+
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)

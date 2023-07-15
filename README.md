@@ -22,8 +22,8 @@ Here are some of the options that you can pass to the docker run command:
 - To rebuild the container run the following: `docker-compose up -d --build <my-container>`
 
 ## To run the API server
-`docker run -p 5000:5000 api-server`
+`docker run -p 8000:8000 server`
 
 ## To run the Api client consumer
-`docker run api-consumer`
+`docker run -p 5000:500 client`
 

@@ -4,3 +4,4 @@ aes
 jinja2
 flask-wtf
 pycryptodome
+requests
