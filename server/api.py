@@ -3,6 +3,7 @@ import rsa
 import aes
 from jinja2 import Template
 from flask_wtf.csrf import CSRFProtect
+from time import datetime
 
 
 app = flask.Flask(__name__)
@@ -59,12 +60,15 @@ def chat():
         message_signature = rsa.sign(message_ciphertext, server_key)
 
         messages.append({
+            "sender": username,
             "text": message_text,
             "ciphertext": message_ciphertext,
-            "signature": message_signature
+            "signature": message_signature,
+            "timestamp": datetime.utcnow()
         })
 
     return flask.jsonify(messages)
+
 
 @app.route("/connect", methods=["POST"])
 def connect():
