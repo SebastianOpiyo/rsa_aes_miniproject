@@ -3,7 +3,6 @@ import rsa
 import aes
 from jinja2 import Template
 from flask_wtf.csrf import CSRFProtect
-#from time import datetime
 from datetime import datetime
 
 
@@ -11,74 +10,99 @@ app = flask.Flask(__name__)
 
 app.secret_key = "your_secret_key"
 
-CSRFProtect(app)
+# Cross Site Request Forgery (CSRF)
+app.config["CSRF_ENABLED"] = True
+app.config["CSRF_SESSION_KEY"] = app.secret_key
+# CSRFProtect(app)
 
-@app.route("/")
+@app.route("/api/")
 def index():
     """
     This is the home page of the chat application.
     """
-    message = "You are looking for a secure chat app? Well our RSA and AES secure chat app will do\
-    just fine fo you."
-    return flask.jsonify({"homecontent":message})
+    message = "You are looking for a secure chat app? Well our RSA and AES secure chat app will do just fine for you."
+    return flask.jsonify({"homecontent": message})
 
-@app.route("/login", methods=["POST"])
+@app.route("/api/login", methods=["POST", "OPTIONS"])
 def login():
     """
     This route handles the login process.
     """
+
+    if flask.request.method == 'OPTIONS':
+        response = flask.current_app.make_default_options_response()
+
     username = flask.request.json["username"]
     password = flask.request.json["password"]
 
     if not username or not password:
         return flask.jsonify({"error": "Please enter a username and password."})
 
-    client_key = rsa.generate_key()
-    server_key = rsa.generate_key()
+    client_key = rsa.newkeys(512)
+    server_key = rsa.newkeys(512)
 
-    flask.session["client_key"] = client_key.export_public_key()
-    flask.session["server_key"] = server_key.export_public_key()
+    flask.session["client_key"] = client_key[0].save_pkcs1().decode()
+    flask.session["server_key"] = server_key[0].save_pkcs1().decode()
+    flask.session["username"] = username  # Set the username in the session
 
     return flask.jsonify({
-        "client_key": client_key.export_public_key(),
-        "server_key": server_key.export_public_key()
+        "client_key": client_key[0].save_pkcs1().decode(),
+        "server_key": server_key[0].save_pkcs1().decode()
     })
 
-@app.route("/chat", methods=["POST"])
+
+@app.route("/api/chat", methods=["POST"])
 def chat():
     """
     This route handles the chat messages.
     """
-    username = flask.session["username"]
-    client_key = rsa.import_key(flask.session["client_key"])
-    server_key = rsa.import_key(flask.session["server_key"])
+    username = flask.session.get("username")
+    if not username:
+        return flask.jsonify({"error": "User not logged in."})
+    
+    client_key_data = flask.session["client_key"]
+    server_key_data = flask.session["server_key"]
 
-    messages = []
+    client_key = rsa.PublicKey.load_pkcs1(client_key_data.encode())
+    server_key = rsa.PublicKey.load_pkcs1(server_key_data.encode())
 
-    for message in flask.request.json:
-        message_text = message["text"]
-        message_ciphertext = aes.encrypt(message_text, client_key)
-        message_signature = rsa.sign(message_ciphertext, server_key)
+    try:
+        data = flask.request.get_json()
+        if not isinstance(data, list):
+            raise ValueError("Invalid JSON data. Expected a list.")
 
-        messages.append({
-            "sender": username,
-            "text": message_text,
-            "ciphertext": message_ciphertext,
-            "signature": message_signature,
-            "timestamp": datetime.utcnow()
-        })
+        messages = []
+        for message in data:
+            if not isinstance(message, dict) or "text" not in message:
+                raise ValueError("Invalid message format.")
 
-    return flask.jsonify(messages)
+            message_text = message["text"]
+            message_ciphertext = aes.encrypt(message_text, client_key)
+            message_signature = rsa.sign(message_ciphertext, server_key)
+
+            messages.append({
+                "sender": username,
+                "text": message_text,
+                "ciphertext": message_ciphertext.decode(),
+                "signature": message_signature.decode(),
+                "timestamp": datetime.utcnow().isoformat()
+            })
+
+        return flask.jsonify({"data": messages})
+
+    except ValueError as e:
+        return flask.jsonify({"error": str(e)})
 
 
-@app.route("/connect", methods=["POST"])
+
+@app.route("/api/connect", methods=["POST"])
 def connect():
     """
     This route establishes a session.
     """
     return flask.jsonify({"success": True})
 
-@app.route("/disconnect", methods=["POST"])
+@app.route("/api/disconnect", methods=["POST"])
 def disconnect():
     """
     This route ends a session.
