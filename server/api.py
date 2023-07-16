@@ -3,7 +3,8 @@ import rsa
 import aes
 from jinja2 import Template
 from flask_wtf.csrf import CSRFProtect
-from time import datetime
+#from time import datetime
+from datetime import datetime
 
 
 app = flask.Flask(__name__)
