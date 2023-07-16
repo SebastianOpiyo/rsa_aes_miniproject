@@ -2,7 +2,6 @@ from flask import Flask, render_template, request, session, flash, redirect
 from jinja2 import Template
 from flask_wtf.csrf  import CSRFProtect
 import requests
-#from time import datetime
 from datetime import datetime
 
 app = Flask(__name__)
