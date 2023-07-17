@@ -2,6 +2,7 @@ version: '3.9'
 
 networks:
   mynetwork:
+    driver: bridge
 
 services:
   server:
