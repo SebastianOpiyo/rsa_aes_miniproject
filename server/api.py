@@ -87,6 +87,7 @@ def chat():
                 "signature": message_signature.decode(),
                 "timestamp": datetime.utcnow().isoformat()
             })
+            print(messages)
 
         return flask.jsonify({"data": messages})
 
