@@ -77,7 +77,7 @@ def chat():
                 raise ValueError("Invalid message format.")
 
             message_text = message["text"]
-            message_ciphertext = aes.encrypt(message_text, client_key)
+            message_ciphertext = aes.encrypt(message_text.encode(), client_key)
             message_signature = rsa.sign(message_ciphertext, server_key)
 
             messages.append({
@@ -87,7 +87,6 @@ def chat():
                 "signature": message_signature.decode(),
                 "timestamp": datetime.utcnow().isoformat()
             })
-            print(messages)
 
         return flask.jsonify({"data": messages})
 

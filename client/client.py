@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, session, flash, redirect, current_app
+from flask import Flask, render_template, request, session, flash, redirect, current_app, json 
 from jinja2 import Template
 from flask_wtf.csrf  import CSRFProtect
 import requests
@@ -52,31 +52,51 @@ def login():
     return render_template('login.html')
 
 
-@app.route('/chat')
+@app.route('/chat', methods=['GET', 'POST'])
 def chat():
     if 'username' not in session:
-        return render_template('login.html')
+        return redirect('/login')
 
-    # We make a request to the chat API
-    response = requests.post('http://server:8000/api/chat', json=request.json)
+    if request.method == 'POST':
+        data = request.get_json(force=True)
+        if not isinstance(data, list):
+            flash('Invalid message format')
+            return redirect('/chat')
 
-    # Upon successful request, get the chat messages
-    if response.status_code == 200:
-        chat_messages = response.json().get("data", [])
-        for message in chat_messages:
-            message['sender'] = session['username']
-            message['timestamp'] = datetime.strptime(message['timestamp'], "%Y-%m-%dT%H:%M:%S.%f")
-    else:
-        flash('Error: There are no messages or the backend services are down.')
-        chat_messages = []
-    
+        # Set the headers with 'application/json' content type
+        headers = {'Content-Type': 'application/json'}
+
+        # We make a request to the chat API
+        response = requests.post('http://server:8000/api/chat', json=data, headers=headers)
+
+        # Upon successful request, get the chat messages
+        if response.status_code == 200:
+            data = response.json().get("data", [])
+            for message in data:
+                message['sender'] = session['username']
+                message['timestamp'] = datetime.strptime(message['timestamp'], "%Y-%m-%dT%H:%M:%S.%f")
+        else:
+            flash('Error: Failed to send message.')
+            data = []
+
+        current_user = {
+            'username': session['username'],
+            'avatar': '#',  # Replace with the actual avatar path
+            'is_online': True  # Set the online status based on your logic
+        }
+
+        return render_template('chat.html', current_user=current_user, messages=data)
+
+    # Handle GET request
     current_user = {
         'username': session['username'],
         'avatar': '#',  # Replace with the actual avatar path
         'is_online': True  # Set the online status based on your logic
     }
-    
-    return render_template('chat.html', current_user=current_user, messages=chat_messages)
+
+    return render_template('chat.html', current_user=current_user, messages=[])
+
+
 
 
 
