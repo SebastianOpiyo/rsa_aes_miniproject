@@ -39,7 +39,7 @@ def login():
             response = current_app.make_default_options_response()
 
         # Make a request to the login api
-        response = requests.post('http://localhost:8000/api/login', json={'username': username, 'password': password})
+        response = requests.post('http://server:8000/api/login', json={'username': username, 'password': password})
 
         # If the request is successful, set the username in the session
         if response.status_code == 200:
@@ -56,20 +56,28 @@ def login():
 def chat():
     if 'username' not in session:
         return render_template('login.html')
-    
+
     # We make a request to the chat API
-    response = requests.get('http://localhost:5000/api/chat', params={'username': session['username']})
+    response = requests.post('http://server:8000/api/chat', json=request.json)
 
     # Upon successful request, get the chat messages
     if response.status_code == 200:
-        chat_messages = response.json()
+        chat_messages = response.json().get("data", [])
         for message in chat_messages:
             message['sender'] = session['username']
-            message['timestamp'] = datetime.utcnow()
+            message['timestamp'] = datetime.strptime(message['timestamp'], "%Y-%m-%dT%H:%M:%S.%f")
     else:
-        flash('Error: There are no messages or the backend services is down.')
+        flash('Error: There are no messages or the backend services are down.')
         chat_messages = []
-    return render_template('chat.html', chat_messages= chat_messages)
+    
+    current_user = {
+        'username': session['username'],
+        'avatar': '#',  # Replace with the actual avatar path
+        'is_online': True  # Set the online status based on your logic
+    }
+    
+    return render_template('chat.html', current_user=current_user, messages=chat_messages)
+
 
 
 if __name__ == '__main__':
