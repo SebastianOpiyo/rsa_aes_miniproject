@@ -1,4 +1,3 @@
-# Client Routes
 from flask import Flask, render_template, request, session, flash, redirect, current_app, json 
 import requests
 from datetime import datetime
@@ -44,6 +43,7 @@ def login():
         # Else if the request is not successful, display an error message.
         else:
             error = "Invalid username or password."
+            flash('Enter values in both username and password.')
             return render_template('login.html', error=error)
     return render_template('login.html')
 
@@ -63,7 +63,7 @@ def chat():
         headers = {'Content-Type': 'application/json'}
 
         # We make a request to the chat API
-        response = requests.post('http://server:8000/api/chat', data=data, headers=headers)
+        response = requests.post('http://server:8000/api/chat', data=json.dumps(data), headers=headers)
 
         # Upon successful request, get the chat messages
         if response.status_code == 200:
@@ -116,7 +116,7 @@ def handle_message(data):
         send_message(username, message)
 
 def send_message(sender, message):
-    socketio.emit('message', {'sender': sender, 'message': message}, broadcast=True)
+    socketio.emit('message', {'sender': sender, 'message': message})
 
 if __name__ == '__main__':
-    socketio.run(app, debug=True, host='0.0.0.0', port=5000)
+    socketio.run(app, debug=True, host='0.0.0.0', port=5000, allow_unsafe_werkzeug=True)

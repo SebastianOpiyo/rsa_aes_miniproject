@@ -1,7 +1,6 @@
 import flask
 import rsa
 import aes
-from jinja2 import Template
 from flask_wtf.csrf import CSRFProtect
 from datetime import datetime
 
@@ -94,7 +93,7 @@ def chat():
 
         # Broadcast the message to all connected clients
         for client in connected_clients:
-            client.send(flask.jsonify({"data": messages}))
+            client.send(flask.jsonify({"data": messages}).data)
 
         return flask.jsonify({"success": True})
 
