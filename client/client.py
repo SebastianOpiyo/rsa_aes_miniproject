@@ -1,17 +1,13 @@
 # Client Routes
 from flask import Flask, render_template, request, session, flash, redirect, current_app, json 
-# from flask_wtf.csrf  import CSRFProtect
 import requests
 from datetime import datetime
+from flask_socketio import SocketIO
+
 
 app = Flask(__name__)
-
-app.secret_key = "your_secret_key"
-
-# CSRFProtect(app)
-app.config["CSRF_ENABLED"] = True
-app.config["CSRF_SESSION_KEY"] = app.secret_key
-
+app.config['SECRET_KEY'] = 'your_secret_key'
+socketio = SocketIO(app)
 
 @app.route('/connect')
 def connect():
@@ -112,5 +108,15 @@ def chat():
     return redirect('/chat')
 
 
+@socketio.on('message')
+def handle_message(data):
+    message = data['message']
+    username = session.get('username')
+    if username and message:
+        send_message(username, message)
+
+def send_message(sender, message):
+    socketio.emit('message', {'sender': sender, 'message': message}, broadcast=True)
+
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    socketio.run(app, debug=True, host='0.0.0.0', port=5000)
