@@ -68,6 +68,7 @@ def chat():
 
     try:
         data = flask.request.get_json()
+        print(data)
         if not isinstance(data, list):
             raise ValueError("Invalid JSON data. Expected a list.")
 

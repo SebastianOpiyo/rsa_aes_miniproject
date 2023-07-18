@@ -1,6 +1,6 @@
+# Client Routes
 from flask import Flask, render_template, request, session, flash, redirect, current_app, json 
-from jinja2 import Template
-from flask_wtf.csrf  import CSRFProtect
+# from flask_wtf.csrf  import CSRFProtect
 import requests
 from datetime import datetime
 
@@ -17,7 +17,7 @@ app.config["CSRF_SESSION_KEY"] = app.secret_key
 def connect():
     if 'username' not in session:
         return render_template('login.html')
-    return flash("Connected successfuly!")
+    return flash("Connected successfully!")
 
 @app.route('/disconnect')
 def disconnect():
@@ -38,7 +38,7 @@ def login():
         if request.method == 'OPTIONS':
             response = current_app.make_default_options_response()
 
-        # Make a request to the login api
+        # Make a request to the login API
         response = requests.post('http://server:8000/api/login', json={'username': username, 'password': password})
 
         # If the request is successful, set the username in the session
@@ -67,7 +67,7 @@ def chat():
         headers = {'Content-Type': 'application/json'}
 
         # We make a request to the chat API
-        response = requests.post('http://server:8000/api/chat', json=data, headers=headers)
+        response = requests.post('http://server:8000/api/chat', data=data, headers=headers)
 
         # Upon successful request, get the chat messages
         if response.status_code == 200:
@@ -88,16 +88,28 @@ def chat():
         return render_template('chat.html', current_user=current_user, messages=data)
 
     # Handle GET request
-    current_user = {
-        'username': session['username'],
-        'avatar': '#',  # Replace with the actual avatar path
-        'is_online': True  # Set the online status based on your logic
-    }
+    if request.method == 'GET':
+        # We make a request to the chat API to retrieve the chat messages
+        response = requests.get('http://server:8000/api/chat')
 
-    return render_template('chat.html', current_user=current_user, messages=[])
+        # Upon successful request, get the chat messages
+        if response.status_code == 200:
+            data = response.json().get("data", [])
+            for message in data:
+                message['timestamp'] = datetime.strptime(message['timestamp'], "%Y-%m-%dT%H:%M:%S.%f")
+        else:
+            flash('Error: Failed to retrieve chat messages.')
+            data = []
 
+        current_user = {
+            'username': session['username'],
+            'avatar': '#',  # Replace with the actual avatar path
+            'is_online': True  # Set the online status based on your logic
+        }
 
+        return render_template('chat.html', current_user=current_user, messages=data)
 
+    return redirect('/chat')
 
 
 if __name__ == '__main__':

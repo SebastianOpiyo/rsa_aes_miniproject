@@ -36,7 +36,13 @@
             <img src="{{ current_user.avatar }}" alt="">
             <div>
                 <h2>Chat with {{ current_user.username }}</h2>
-                <h3>{{ 'Connected' if current_user.is_online else 'Offline' }}</h3>
+                <h3>
+                    {% if current_user.is_online %}
+                        Connected
+                    {% else %}
+                        Offline
+                    {% endif %}
+                </h3>
             </div>
             <img src="static/ico_star.png" alt="">
         </header>
@@ -65,19 +71,89 @@
 
 <script>
     // JavaScript code to handle sending and receiving messages dynamically
-    // ...
 
-    // Example code to send a message
-    const messageInput = document.getElementById('message-input');
+    // Send a message to the chat API
+	function sendMessage(message) {
+		const messageData = [{ "text": message, "sender":"{{ current_user.username }}" }]; // Create a list with a single message object
+		const xhr = new XMLHttpRequest();
+		xhr.open('POST', 'http:server:8000/api/chat');
+		xhr.setRequestHeader('Content-Type', 'application/json');
+		xhr.onreadystatechange = function () {
+			if (xhr.readyState === XMLHttpRequest.DONE) {
+				if (xhr.status === 200) {
+					// Message sent successfully
+					console.log('Message sent:', messageData);
+				} else {
+					// Error sending message
+					console.error('Error sending message:', xhr.responseText);
+				}
+			}
+		};
+		xhr.send(JSON.stringify(messageData));
+	}
+
+
+    // Receive messages from the chat API
+    function receiveMessages() {
+        const xhr = new XMLHttpRequest();
+        xhr.open('GET', 'http:server:8000/api/chat');
+        xhr.onreadystatechange = function () {
+            if (xhr.readyState === XMLHttpRequest.DONE) {
+                if (xhr.status === 200) {
+                    // Messages received successfully
+                    const response = JSON.parse(xhr.responseText);
+                    const messages = response.messages;
+                    console.log('Received messages:', messages);
+                    // Process and display the received messages in the chat window
+                    const chat = document.getElementById('chat');
+                    for (let i = 0; i < messages.length; i++) {
+                        const message = messages[i];
+                        const li = document.createElement('li');
+                        li.className = message.sender === '{{ current_user.username }}' ? 'you' : 'me';
+                        const entete = document.createElement('div');
+                        entete.className = 'entete';
+                        const statusSpan = document.createElement('span');
+                        statusSpan.className = message.sender === '{{ current_user.username }}' ? 'status green' : 'status blue';
+                        entete.appendChild(statusSpan);
+                        const h2 = document.createElement('h2');
+                        h2.textContent = message.sender;
+                        entete.appendChild(h2);
+                        const h3 = document.createElement('h3');
+                        h3.textContent = message.timestamp;
+                        entete.appendChild(h3);
+                        li.appendChild(entete);
+                        const triangle = document.createElement('div');
+                        triangle.className = 'triangle';
+                        li.appendChild(triangle);
+                        const messageDiv = document.createElement('div');
+                        messageDiv.className = 'message';
+                        messageDiv.textContent = message.text;
+                        li.appendChild(messageDiv);
+                        chat.appendChild(li);
+                    }
+                } else {
+                    // Error receiving messages
+                    console.error('Error receiving messages:', xhr.responseText);
+                }
+            }
+        };
+        xhr.send();
+    }
+
+    // Handle send button click event
     const sendButton = document.getElementById('send-button');
-
-    sendButton.addEventListener('click', () => {
+    sendButton.addEventListener('click', function () {
+        const messageInput = document.getElementById('message-input');
         const message = messageInput.value;
-        // Send the message using your preferred method (e.g., WebSocket, AJAX, etc.)
-        // ...
+        if (message) {
+            sendMessage(message);
+            messageInput.value = '';
+        }
     });
 
-    // ...
+    // Periodically receive messages
+    setInterval(receiveMessages, 5000);  // Adjust the interval as needed
+
 </script>
   
 </body>
