@@ -15,6 +15,9 @@ app.config["CSRF_ENABLED"] = True
 app.config["CSRF_SESSION_KEY"] = app.secret_key
 # CSRFProtect(app)
 
+# Store the connected WebSocket clients
+connected_clients = set()
+
 @app.route("/api/")
 def index():
     """
@@ -89,26 +92,45 @@ def chat():
                 "timestamp": datetime.utcnow().isoformat()
             })
 
-        return flask.jsonify({"data": messages})
+        # Broadcast the message to all connected clients
+        for client in connected_clients:
+            client.send(flask.jsonify({"data": messages}))
+
+        return flask.jsonify({"success": True})
 
     except ValueError as e:
         return flask.jsonify({"error": str(e)})
 
-
-
 @app.route("/api/connect", methods=["POST"])
 def connect():
     """
-    This route establishes a session.
+    This route establishes a WebSocket connection and adds the client to the set of connected clients.
     """
+    # Create a WebSocket connection
+    ws = flask.request.environ.get("wsgi.websocket")
+
+    # Check if WebSocket connection is established
+    if ws:
+        connected_clients.add(ws)
+
+        # Receive messages from the WebSocket client
+        while True:
+            message = ws.receive()
+            if message:
+                # Process and broadcast the received message to all connected clients
+                data = [{"text": message}]
+                chat()
+
     return flask.jsonify({"success": True})
 
 @app.route("/api/disconnect", methods=["POST"])
 def disconnect():
     """
-    This route ends a session.
+    This route removes the WebSocket client from the set of connected clients.
     """
-    flask.session.clear()
+    ws = flask.request.environ.get("wsgi.websocket")
+    if ws in connected_clients:
+        connected_clients.remove(ws)
     return flask.jsonify({"success": True})
 
 if __name__ == "__main__":
