@@ -5,3 +5,7 @@ jinja2
 flask-wtf
 pycryptodome
 requests
+Flask-SocketIO
+gunicorn
+eventlet
+simple-websocket
