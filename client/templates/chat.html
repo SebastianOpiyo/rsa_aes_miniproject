@@ -78,20 +78,21 @@
     socket.on('message', function (data) {
         const message = data.message;
         console.log("Received message:", message);
+        
         // Process and display the received message in the chat window
         const chat = document.getElementById("chat");
         const li = document.createElement("li");
-        li.className = message.sender === "{{ current_user.username }}" ? "you" : "me";
+        li.className = data.sender === "{{ current_user.username }}" ? "you" : "me";
         const entete = document.createElement("div");
         entete.className = "entete";
         const statusSpan = document.createElement("span");
-        statusSpan.className = message.sender === "{{ current_user.username }}" ? "status green" : "status blue";
+        statusSpan.className = data.sender === "{{ current_user.username }}" ? "status green" : "status blue";
         entete.appendChild(statusSpan);
         const h2 = document.createElement("h2");
-        h2.textContent = message.sender;
+        h2.textContent = data.sender;
         entete.appendChild(h2);
         const h3 = document.createElement("h3");
-        h3.textContent = message.timestamp;
+        h3.textContent = data.timestamp;
         entete.appendChild(h3);
         li.appendChild(entete);
         const triangle = document.createElement("div");
@@ -99,7 +100,7 @@
         li.appendChild(triangle);
         const messageDiv = document.createElement("div");
         messageDiv.className = "message";
-        messageDiv.textContent = message.text;
+        messageDiv.textContent = message;
         li.appendChild(messageDiv);
         chat.appendChild(li);
     });

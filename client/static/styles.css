@@ -300,7 +300,7 @@ form{
 }
 .btn{
 	transition: all .5s ease;
-  box-align:center
+  box-align:center;
 	width: 70%;
 	border-radius: 30px;
 	color:#008080;
