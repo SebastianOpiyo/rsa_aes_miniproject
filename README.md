@@ -34,7 +34,7 @@ The client-side of the application is built using JavaScript. It provides the us
 - `Chat`: The chat function handles sending and receiving messages. It sends a POST request to the `/api/chat` endpoint when the user submits a message, and it listens for incoming messages from the server.
 - `WebSocket Connection`: The connect function establishes a WebSocket connection with the server, while the disconnect function closes the WebSocket connection.
 
-The application also uses Jinja templating to display information such as the current user's username and the list of chat messages. The status of the user (online/offline) is also updated dynamically based on the WebSocket connection status.
+The application also uses Jinja2 templating to display information such as the current user's username and the list of chat messages. The status of the user (online/offline) is also updated dynamically based on the WebSocket connection status.
 
 ## Installation and Usage
 Both server and client applications can be dockerized using Docker. Docker allows you to package an application with all its dependencies into a standardized unit for software development. Dockerfiles and a docker-compose file are provided for this purpose.

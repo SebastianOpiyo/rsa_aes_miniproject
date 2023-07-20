@@ -16,7 +16,7 @@ services:
     networks:
       - chatnetwork
 
-  client01:
+  client:
     image: client
     container_name: client
     build:
