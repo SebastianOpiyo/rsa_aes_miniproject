@@ -1,7 +1,7 @@
 version: '3.9'
 
 networks:
-  mynetwork:
+  chatnetwork:
     driver: bridge
 
 services:
@@ -14,7 +14,7 @@ services:
     ports:
       - 8000:8000
     networks:
-      - mynetwork
+      - chatnetwork
 
   client:
     image: client
@@ -27,4 +27,5 @@ services:
     ports:
       - '5000:5000'
     networks:
-      - mynetwork
+      - chatnetwork
+      
