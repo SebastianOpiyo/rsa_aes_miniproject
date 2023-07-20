@@ -18,24 +18,14 @@ services:
 
   client01:
     image: client
-    container_name: client01
+    container_name: client
     build:
       context: .
       dockerfile: ./client/Dockerfile
     depends_on:
       - server
     ports:
-      - '8080:5000'
+      - '5000:5000'
     networks:
       - chatnetwork
-
-  client02:
-    image: client
-    container_name: client02
-    depends_on:
-      - server
-      - client01
-    ports:
-      - '9000:5000'
-    networks:
-      - chatnetwork
+      
