@@ -1,7 +1,7 @@
 version: '3.9'
 
 networks:
-  mynetwork:
+  chatnetwork:
     driver: bridge
 
 services:
@@ -14,17 +14,28 @@ services:
     ports:
       - 8000:8000
     networks:
-      - mynetwork
+      - chatnetwork
 
-  client:
+  client01:
     image: client
-    container_name: client
+    container_name: client01
     build:
       context: .
       dockerfile: ./client/Dockerfile
     depends_on:
       - server
     ports:
-      - '5000:5000'
+      - '8080:5000'
     networks:
-      - mynetwork
+      - chatnetwork
+
+  client02:
+    image: client
+    container_name: client02
+    depends_on:
+      - server
+      - client01
+    ports:
+      - '9000:5000'
+    networks:
+      - chatnetwork
