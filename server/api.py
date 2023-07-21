@@ -70,7 +70,7 @@ def chat():
 
     try:
         data = flask.request.get_json()
-        print(data)
+
         if not isinstance(data, list):
             raise ValueError("Invalid JSON data. Expected a list.")
 
@@ -88,7 +88,7 @@ def chat():
                 "text": message_text,
                 "ciphertext": message_ciphertext.decode(),
                 "signature": message_signature.decode(),
-                "timestamp": datetime.utcnow().isoformat()
+                "timestamp": datetime.now(timezone.utc).replace(microsecond=0).isoformat()
             })
 
         # Broadcast the message to all connected clients
