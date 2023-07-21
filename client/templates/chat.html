@@ -74,14 +74,40 @@
     // Establish a WebSocket connection
     const socket = io();
 
+    // Function to log encrypted messages and keys
+    function logEncryptedData(encryptedMessage, encryptedSessionKey) {
+        console.log("Encrypted Message:", encryptedMessage);
+        console.log("Encrypted Session Key:", encryptedSessionKey);
+    }
+
+    // Function to decrypt the message with the client's private key
+    function decryptMessage(encryptedMessage) {
+        const clientPrivateKey = '{{ session["client_private_key"] }}';
+        const encryptedSessionKey = encryptedMessage.encrypted_session_key;
+        const ciphertext = encryptedMessage.ciphertext;
+
+        // Load the client's private key
+        const privateKey = rsa.PrivateKey.load_pkcs1(clientPrivateKey);
+
+        // Decrypt the session key using the client's private key
+        const sessionKey = rsa.decrypt(encryptedSessionKey, privateKey);
+
+        // Decrypt the ciphertext to get the original message
+        const decryptedMessage = aes.decrypt(ciphertext, sessionKey);
+
+        return decryptedMessage;
+    }
+
+
     // Handle WebSocket message event
     socket.on('message', function (data) {
-        const message = data.message;
-        console.log("Received message:", message);
+        const encryptedMessage = data.message;
+        console.log("Received encrypted message:", encryptedMessage);
 
-        // Decrypt the message using the client's public key
-        const decrytptedMessage = decryptMessage(message)
-        
+        // Decrypt the message using the client's private key
+        const decryptedMessage = decryptMessage(encryptedMessage);
+        console.log("Decrypted message:", decryptedMessage);
+
         // Process and display the received message in the chat window
         const chat = document.getElementById("chat");
         const li = document.createElement("li");
@@ -95,11 +121,7 @@
         h2.textContent = data.sender;
         entete.appendChild(h2);
         const h3 = document.createElement("h3");
-        // Convert the timestamp to a valid date format
-        const timestamp = data.timestamp;
-        console.log( timestamp)
-        // Use toLocaleString() to format the timestamp
-        h3.textContent = timestamp;
+        h3.textContent = data.timestamp;
         entete.appendChild(h3);
         li.appendChild(entete);
         const triangle = document.createElement("div");
@@ -107,7 +129,7 @@
         li.appendChild(triangle);
         const messageDiv = document.createElement("div");
         messageDiv.className = "message";
-        messageDiv.textContent = decrytptedMessage;
+        messageDiv.textContent = decryptedMessage; // Display the decrypted message
         li.appendChild(messageDiv);
         chat.appendChild(li);
     });
@@ -118,9 +140,7 @@
         const messageInput = document.getElementById("message-input");
         const message = messageInput.value;
         if (message) {
-            // Encrypt the message with the server's public key before sending
-            const encryptedMessage = encryptMessage(message);
-            sendMessage(encryptedMessage);
+            sendMessage(message);
             messageInput.value = "";
         }
     });
@@ -133,39 +153,31 @@
 
     // Send a message to the server
     function sendMessage(message) {
-        socket.emit("message", { "message": message });
+        const encryptedMessage = encryptMessage(message); // Encrypt the message before sending
+        socket.emit("message", { "message": encryptedMessage });
     }
 
-    // Decrypt the message using the cleint's private key
-    function decryptMessage(message) {
-        const privateKeyData = "{{ session['client_private_key' ]}}";
-        const privateKey = rsa.PrivateKey.load_pkcs1(privateKeyData);
-        const encryptedMessage = JSON.parse(message);
-        const sessionKey = rsa.decrypt(encryptedMessage.encrypted_session_key, privateKey);
-        const decryptedText = aes.decrypt(encryptedMessage.ciphertext, sessionKey);
-        return decryptedText;
-    }
-
-    
     // Encrypt the message with the server's public key
     function encryptMessage(message) {
-        const serverPublicKeyData = "{{ session['server_public_key'] }}";
-        const serverPublicKey = rsa.PublicKey.load_pkcs1(serverPublicKeyData);
+        const serverPublicKey = '{{ session["server_public_key"] }}';
+        const publicKey = rsa.PublicKey.load_pkcs1(serverPublicKey);
+
         const sessionKey = aes.generate_key();
         const ciphertext = aes.encrypt(message, sessionKey);
-        const encryptedSessionKey = rsa.encrypt(sessionKey, serverPublicKey);
+        const encryptedSessionKey = rsa.encrypt(sessionKey, publicKey);
+
         const encryptedMessage = {
             "ciphertext": ciphertext,
             "encrypted_session_key": encryptedSessionKey
         };
-        return JSON.stringify(encryptedMessage);
+
+        return encryptedMessage;
     }
 
     // Disconnect from the server
     function disconnect() {
         socket.disconnect();
     }
-    
 </script>
   
 </body>
