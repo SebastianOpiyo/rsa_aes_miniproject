@@ -17,6 +17,9 @@ app.config["CSRF_SESSION_KEY"] = app.secret_key
 # Store the connected WebSocket clients
 connected_clients = set()
 
+# Store the client public keys
+client_public_keys = {}
+
 @app.route("/api/")
 def index():
     """
@@ -47,8 +50,9 @@ def login():
     flask.session["server_key"] = server_key[0].save_pkcs1().decode()
     flask.session["username"] = username  # Set the username in the session
 
+    # Share server public key and client public key with the cleint
     return flask.jsonify({
-        "client_key": client_key[0].save_pkcs1().decode(),
+        "client_key": client_key[1].save_pkcs1().decode(),
         "server_key": server_key[0].save_pkcs1().decode()
     })
 
