@@ -92,7 +92,11 @@
         h2.textContent = data.sender;
         entete.appendChild(h2);
         const h3 = document.createElement("h3");
-        h3.textContent = data.timestamp;
+        // Convert the timestamp to a valid date format
+        const timestamp = data.timestamp;
+        console.log( timestamp)
+        // Use toLocaleString() to format the timestamp
+        h3.textContent = timestamp;
         entete.appendChild(h3);
         li.appendChild(entete);
         const triangle = document.createElement("div");
