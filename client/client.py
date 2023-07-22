@@ -47,6 +47,7 @@ def login():
             # Also store the server's public key in a variable for encryption
             global server_public_key
             server_public_key = rsa.PublicKey.load_pkcs1(data["server_key"].encode())
+            # print(server_public_key)
             return redirect('/chat')
         # Else if the request is not successful, display an error message.
         else:
@@ -56,70 +57,56 @@ def login():
     return render_template('login.html')
 
 
-@app.route('/chat', methods=['GET', 'POST'])
+@app.route('/chat')
 def chat():
     if 'username' not in session or 'client_private_key' not in session or 'server_public_key' not in session:
         return redirect('/login')
 
-    if request.method == 'POST':
-        data = request.get_json(force=True)
-        if not isinstance(data, list):
-            flash('Invalid message format')
-            return redirect('/chat')
+    current_user = {
+        'username': session['username'],
+        'avatar': '#',  # Replace with the actual avatar path
+        'is_online': True  # Set the online status based on your logic
+    }
 
-        # Set the headers with 'application/json' content type
-        headers = {'Content-Type': 'application/json'}
+    return render_template('chat.html', current_user=current_user)
 
-        # Encrypt messages with the server's public key before sending
-        encrypted_data = encrypt_messages_with_server_key(data)
-        response = requests.post('http://server:8000/api/chat', data=json.dumps(encrypted_data), headers=headers)
+# Function to encrypt the message with the server's public key
+def encrypt_message(message):
+    server_public_key_data = session['server_public_key']
+    server_public_key = rsa.PublicKey.load_pkcs1(server_public_key_data.encode())
+    session_key = aes.generate_key()
+    ciphertext = aes.encrypt(message.encode(), session_key)
+    encrypted_session_key = rsa.encrypt(session_key, server_public_key)
+    encrypted_message = {
+        "ciphertext": ciphertext,
+        "encrypted_session_key": encrypted_session_key
+    }
+    return json.dumps(encrypted_message)
 
-        # Upon successful request, get the chat messages
-        if response.status_code == 200:
-            data = response.json().get("data", [])
-            for message in data:
-                # Decrypt each received message before displaying
-                decrypted_message = decrypt_message_with_client_key(message['ciphertext'], message['encrypted_session_key'])
-                message['text'] = decrypted_message
-                message['timestamp'] = datetime.strptime(message['timestamp'], "%Y-%m-%dT%H:%M:%S.%f")
-        else:
-            flash('Error: Failed to send message.')
-            data = []
+@socketio.on('connect')
+def handle_connect():
+    print("Client connected")
 
-        current_user = {
-            'username': session['username'],
-            'avatar': '#',  # Replace with the actual avatar path
-            'is_online': True  # Set the online status based on your logic
-        }
 
-        return render_template('chat.html', current_user=current_user, messages=data)
+@socketio.on('message')
+def handle_message(data):
+    message = data['message']
+    print("Received encrypted message:", message)
 
-    # Handle GET request
-    if request.method == 'GET':
-        # We make a request to the chat API to retrieve the chat messages
-        response = requests.get('http://server:8000/api/chat')
+    # Decrypt the message using the client's private key
+    decrypted_message = decrypt_message_with_client_key(message['ciphertext'], message['encrypted_session_key'])
+    print("Decrypted message:", decrypted_message)
 
-        # Upon successful request, get the chat messages
-        if response.status_code == 200:
-            data = response.json().get("data", [])
-            for message in data:
-                # Decrypt each received message before displaying
-                decrypted_message = decrypt_message_with_client_key(message['ciphertext'], message['encrypted_session_key'])
-                message['text'] = decrypted_message
-                message['timestamp'] = datetime.strptime(message['timestamp'], "%Y-%m-%dT%H:%M:%S.%f")
-        else:
-            flash('Error: Failed to retrieve chat messages.')
-            data = []
+    # Broadcast the decrypted message to all connected clients
+    socketio.emit('send_message', {
+        'sender': session['username'],
+        'text': decrypted_message,
+        'timestamp': datetime.now().isoformat()
+    })
 
-        current_user = {
-            'username': session['username'],
-            'avatar': '#',  # Replace with the actual avatar path
-            'is_online': True  # Set the online status based on your logic
-        }
-
-        return render_template('chat.html', current_user=current_user, messages=data)
-
-    return redirect('/chat')
+@socketio.on('disconnect')
+def handle_disconnect():
+    print("Client disconnected")
 
 def encrypt_messages_with_server_key(messages):
     encrypted_data = []
@@ -142,7 +129,7 @@ def encrypt_message_with_server_key(message):
 
 def decrypt_message_with_client_key(ciphertext, encrypted_session_key):
     client_private_key_data = session['client_private_key']
-    client_private_key = rsa.PrivateKey.load_pkcs1(client_private_key_data)
+    client_private_key = rsa.PrivateKey.load_pkcs1(client_private_key_data.encode())
     session_key = rsa.decrypt(encrypted_session_key, client_private_key)
     decrypted_message = aes.decrypt(ciphertext.encode(), session_key)
     return decrypted_message.decode()

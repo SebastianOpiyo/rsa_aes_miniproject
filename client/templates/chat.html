@@ -69,16 +69,17 @@
     </main>
 </div>
 
+<!-- Import Socket.IO library -->
 <script src="//cdnjs.cloudflare.com/ajax/libs/socket.io/4.2.0/socket.io.js"></script>
 <script>
     // Establish a WebSocket connection
     const socket = io();
 
     // Function to log encrypted messages and keys
-    function logEncryptedData(encryptedMessage, encryptedSessionKey) {
-        console.log("Encrypted Message:", encryptedMessage);
-        console.log("Encrypted Session Key:", encryptedSessionKey);
-    }
+    
+    console.log("Encrypted Message:", encryptedMessage);
+    console.log("Encrypted Session Key:", encryptedSessionKey);
+    
 
     // Function to decrypt the message with the client's private key
     function decryptMessage(encryptedMessage) {
@@ -97,7 +98,6 @@
 
         return decryptedMessage;
     }
-
 
     // Handle WebSocket message event
     socket.on('message', function (data) {
@@ -153,12 +153,12 @@
 
     // Send a message to the server
     function sendMessage(message) {
-        const encryptedMessage = encryptMessage(message); // Encrypt the message before sending
-        socket.emit("message", { "message": encryptedMessage });
+        const encryptedMessages = encryptMessagesWithServerKey([{ "text": message }]); // Encrypt the message before sending
+        socket.emit("send_message", { "messages": encryptedMessages }); // Change the event name to "send_message"
     }
 
     // Encrypt the message with the server's public key
-    function encryptMessage(message) {
+    function encryptMessagesWithServerKey(message) {
         const serverPublicKey = '{{ session["server_public_key"] }}';
         const publicKey = rsa.PublicKey.load_pkcs1(serverPublicKey);
 
