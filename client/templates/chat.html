@@ -70,16 +70,21 @@
 </div>
 
 <!-- Import Socket.IO library -->
-<script src="//cdnjs.cloudflare.com/ajax/libs/socket.io/4.2.0/socket.io.js"></script>
+<script type="module" src="//cdnjs.cloudflare.com/ajax/libs/socket.io/4.2.0/socket.io.js"></script>
+ <!-- Import RSA library -->
+ <script type="module" src="https://cdnjs.cloudflare.com/ajax/libs/jsrsasign/10.2.0/jsrsasign-all-min.js"></script>
+ <!-- Import AES library -->
+ <script type="module" src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+</head>
 <script>
     // Establish a WebSocket connection
     const socket = io();
 
     // Function to log encrypted messages and keys
-    
+
     console.log("Encrypted Message:", encryptedMessage);
     console.log("Encrypted Session Key:", encryptedSessionKey);
-    
+
 
     // Function to decrypt the message with the client's private key
     function decryptMessage(encryptedMessage) {
@@ -88,15 +93,17 @@
         const ciphertext = encryptedMessage.ciphertext;
 
         // Load the client's private key
-        const privateKey = rsa.PrivateKey.load_pkcs1(clientPrivateKey);
+        const privateKey = new RSAKey();
+        privateKey.readPrivateKeyFromPEMString(clientPrivateKey);
 
         // Decrypt the session key using the client's private key
-        const sessionKey = rsa.decrypt(encryptedSessionKey, privateKey);
+        const sessionKey = new Buffer.from(rsaDecryptOAEP(encryptedSessionKey, privateKey));
 
         // Decrypt the ciphertext to get the original message
-        const decryptedMessage = aes.decrypt(ciphertext, sessionKey);
+        const decryptedMessage = CryptoJS.AES.decrypt(ciphertext, sessionKey).toString(CryptoJS.enc.Utf8);
 
         return decryptedMessage;
+
     }
 
     // Handle WebSocket message event
@@ -158,13 +165,20 @@
     }
 
     // Encrypt the message with the server's public key
-    function encryptMessagesWithServerKey(message) {
+    async function encryptMessagesWithServerKey(message) {
         const serverPublicKey = '{{ session["server_public_key"] }}';
-        const publicKey = rsa.PublicKey.load_pkcs1(serverPublicKey);
 
-        const sessionKey = aes.generate_key();
-        const ciphertext = aes.encrypt(message, sessionKey);
-        const encryptedSessionKey = rsa.encrypt(sessionKey, publicKey);
+        // Load the server's public key
+        const publicKey = KEYUTIL.getKey(serverPublicKey);
+
+        // Generate a random session key for AES encryption
+        const sessionKey = CryptoJS.lib.WordArray.random(16);
+
+        // Encrypt the message using AES with the generated session key
+        const ciphertext = CryptoJS.AES.encrypt(JSON.stringify(message), sessionKey).toString();
+
+        // Encrypt the session key using the server's public key
+        const encryptedSessionKey = KEYUTIL.getPEM(publicKey.encrypt(sessionKey.toString()));
 
         const encryptedMessage = {
             "ciphertext": ciphertext,
@@ -173,12 +187,11 @@
 
         return encryptedMessage;
     }
-
     // Disconnect from the server
     function disconnect() {
         socket.disconnect();
     }
+
 </script>
-  
 </body>
 </html>
