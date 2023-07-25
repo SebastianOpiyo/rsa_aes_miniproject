@@ -122,6 +122,7 @@ def connect():
     if ws:
         # Add the client to the set of connected clients
         connected_clients.add(ws)
+        ws.username = flask.session.get("username")  # Store the username in the WebSocket object
 
         # Start receiving messages from the client
         while True:
@@ -129,15 +130,18 @@ def connect():
             if data:
                 # Process and broadcast the received message to all connected clients
                 messages = json.loads(data)["messages"]
-                handle_received_messages(messages)  # Process and broadcast the received messages
+                handle_received_messages(ws.username, messages)  # Process and broadcast the received messages
 
-    # return flask.jsonify({"success": True})
-def handle_received_messages(messages):
+    return flask.jsonify({"success": True})
+
+
+def handle_received_messages(sender_username, messages):
+    # Encrypt the message with the senders username
+    encrypted_messages = encrypt_messages(sender_username, messages)
+
     # Broadcast the encrypted messages to all connected clients
     for client in connected_clients:
         if client.username in client_public_keys:
-            # Encrypt the messages with the client's public key before sending
-            encrypted_messages = encrypt_messages(client.username, messages)
             client.send(flask.jsonify({"data": encrypted_messages}).data)
 
 

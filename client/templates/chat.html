@@ -2,196 +2,79 @@
 <html>
 <body>
 
-<head>
-  <link rel="stylesheet" href="static/styles.css">
-</head>
-
-<div id="container">
-    <aside>
-        <header>
-            <div><h3>{{ group_name }}</h3></div>
-            <ul>
-                {% for user in users %}
-                    <li>
-                        <img src="{{ user.avatar }}" alt="">
-                        <div>
-                            <h2>{{ user.username }}</h2>
-                            <h3>
-                                {% if user.is_online %}
-                                    <span class="status green"></span>
-                                    online
-                                {% else %}
-                                    <span class="status orange"></span>
-                                    offline
-                                {% endif %}
-                            </h3>
-                        </div>
-                    </li>
-                {% endfor %}
-            </ul>
-        </header>
-    </aside>
-    <main>
-        <header>
-            <img src="{{ current_user.avatar }}" alt="">
-            <div>
-                <h2>Chat with {{ current_user.username }}</h2>
-                <h3>
-                    {% if current_user.is_online %}
-                        Connected
-                    {% else %}
-                        Offline
-                    {% endif %}
-                </h3>
-            </div>
-            <img src="static/ico_star.png" alt="">
-        </header>
-        <ul id="chat">
-            {% for message in messages %}
-                <li class="{{ 'you' if message.sender == current_user.username else 'me' }}">
-                    <div class="entete">
-                        <span class="status {{ 'green' if message.sender == current_user.username else 'blue' }}"></span>
-                        <h2>{{ message.sender }}</h2>
-                        <h3>{{ message.timestamp }}</h3>
-                    </div>
-                    <div class="triangle"></div>
-                    <div class="message">
-                        {{ message.text }}
-                    </div>
-                </li>
-            {% endfor %}
-        </ul>
-        <footer>
-            <textarea id="message-input" placeholder="Type your message"></textarea>
-            <button id="send-button">Send</button>
-            <button id="disconnect-button">Disconnect</button>
-        </footer>
-    </main>
-</div>
+    <head>
+        <link rel="stylesheet" href="static/styles.css">
+    </head>
+        <div id="container">
+          <aside>
+              <header>
+                  <div><h3>{{ group_name }}</h3></div>
+                  <ul>
+                      {% for user in users %}
+                          <li>
+                              <img src="{{ user.avatar }}" alt="">
+                              <div>
+                                  <h2>{{ user.username }}</h2>
+                                  <h3>
+                                      {% if user.is_online %}
+                                          <span class="status green"></span>
+                                          online
+                                      {% else %}
+                                          <span class="status orange"></span>
+                                          offline
+                                      {% endif %}
+                                  </h3>
+                              </div>
+                          </li>
+                      {% endfor %}
+                  </ul>
+              </header>
+          </aside>
+          <main>
+              <header>
+                  <img src="{{ current_user.avatar }}" alt="">
+                  <div>
+                      <h2>Chat with {{ current_user.username }}</h2>
+                      <h3>
+                          {% if current_user.is_online %}
+                              Connected
+                          {% else %}
+                              Offline
+                          {% endif %}
+                      </h3>
+                  </div>
+                  <img src="static/ico_star.png" alt="">
+              </header>
+              <ul id="chat">
+                  {% for message in messages %}
+                      <li class="{{ 'you' if message.sender == current_user.username else 'me' }}">
+                          <div class="entete">
+                              <span class="status {{ 'green' if message.sender == current_user.username else 'blue' }}"></span>
+                              <h2>{{ message.sender }}</h2>
+                              <h3>{{ message.timestamp }}</h3>
+                          </div>
+                          <div class="triangle"></div>
+                          <div class="message">
+                              {{ message.text }}
+                          </div>
+                      </li>
+                  {% endfor %}
+              </ul>
+              <footer>
+                  <textarea id="message-input" placeholder="Type your message"></textarea>
+                  <button id="send-button">Send</button>
+                  <button id="disconnect-button">Disconnect</button>
+              </footer>
+          </main>
+        </div>
+      
 
 <!-- Import Socket.IO library -->
-<script type="module" src="//cdnjs.cloudflare.com/ajax/libs/socket.io/4.2.0/socket.io.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/socket.io/4.2.0/socket.io.js"></script>
  <!-- Import RSA library -->
- <script type="module" src="https://cdnjs.cloudflare.com/ajax/libs/jsrsasign/10.2.0/jsrsasign-all-min.js"></script>
+ <script src="//cdnjs.cloudflare.com/ajax/libs/jsrsasign/10.2.0/jsrsasign-all-min.js"></script>
  <!-- Import AES library -->
- <script type="module" src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
-</head>
-<script>
-    // Establish a WebSocket connection
-    const socket = io();
-
-    // Function to log encrypted messages and keys
-
-    console.log("Encrypted Message:", encryptedMessage);
-    console.log("Encrypted Session Key:", encryptedSessionKey);
-
-
-    // Function to decrypt the message with the client's private key
-    function decryptMessage(encryptedMessage) {
-        const clientPrivateKey = '{{ session["client_private_key"] }}';
-        const encryptedSessionKey = encryptedMessage.encrypted_session_key;
-        const ciphertext = encryptedMessage.ciphertext;
-
-        // Load the client's private key
-        const privateKey = new RSAKey();
-        privateKey.readPrivateKeyFromPEMString(clientPrivateKey);
-
-        // Decrypt the session key using the client's private key
-        const sessionKey = new Buffer.from(rsaDecryptOAEP(encryptedSessionKey, privateKey));
-
-        // Decrypt the ciphertext to get the original message
-        const decryptedMessage = CryptoJS.AES.decrypt(ciphertext, sessionKey).toString(CryptoJS.enc.Utf8);
-
-        return decryptedMessage;
-
-    }
-
-    // Handle WebSocket message event
-    socket.on('message', function (data) {
-        const encryptedMessage = data.message;
-        console.log("Received encrypted message:", encryptedMessage);
-
-        // Decrypt the message using the client's private key
-        const decryptedMessage = decryptMessage(encryptedMessage);
-        console.log("Decrypted message:", decryptedMessage);
-
-        // Process and display the received message in the chat window
-        const chat = document.getElementById("chat");
-        const li = document.createElement("li");
-        li.className = data.sender === "{{ current_user.username }}" ? "you" : "me";
-        const entete = document.createElement("div");
-        entete.className = "entete";
-        const statusSpan = document.createElement("span");
-        statusSpan.className = data.sender === "{{ current_user.username }}" ? "status green" : "status blue";
-        entete.appendChild(statusSpan);
-        const h2 = document.createElement("h2");
-        h2.textContent = data.sender;
-        entete.appendChild(h2);
-        const h3 = document.createElement("h3");
-        h3.textContent = data.timestamp;
-        entete.appendChild(h3);
-        li.appendChild(entete);
-        const triangle = document.createElement("div");
-        triangle.className = "triangle";
-        li.appendChild(triangle);
-        const messageDiv = document.createElement("div");
-        messageDiv.className = "message";
-        messageDiv.textContent = decryptedMessage; // Display the decrypted message
-        li.appendChild(messageDiv);
-        chat.appendChild(li);
-    });
-
-    // Handle send button click event
-    const sendButton = document.getElementById("send-button");
-    sendButton.addEventListener("click", function () {
-        const messageInput = document.getElementById("message-input");
-        const message = messageInput.value;
-        if (message) {
-            sendMessage(message);
-            messageInput.value = "";
-        }
-    });
-
-    // Handle disconnect button click event
-    const disconnectButton = document.getElementById("disconnect-button");
-    disconnectButton.addEventListener("click", function () {
-        disconnect();
-    });
-
-    // Send a message to the server
-    function sendMessage(message) {
-        const encryptedMessages = encryptMessagesWithServerKey([{ "text": message }]); // Encrypt the message before sending
-        socket.emit("send_message", { "messages": encryptedMessages }); // Change the event name to "send_message"
-    }
-
-    // Encrypt the message with the server's public key
-    async function encryptMessagesWithServerKey(message) {
-        const serverPublicKey = '{{ session["server_public_key"] }}';
-
-        // Load the server's public key
-        const publicKey = KEYUTIL.getKey(serverPublicKey);
-
-        // Generate a random session key for AES encryption
-        const sessionKey = CryptoJS.lib.WordArray.random(16);
-
-        // Encrypt the message using AES with the generated session key
-        const ciphertext = CryptoJS.AES.encrypt(JSON.stringify(message), sessionKey).toString();
-
-        // Encrypt the session key using the server's public key
-        const encryptedSessionKey = KEYUTIL.getPEM(publicKey.encrypt(sessionKey.toString()));
-
-        const encryptedMessage = {
-            "ciphertext": ciphertext,
-            "encrypted_session_key": encryptedSessionKey
-        };
-
-        return encryptedMessage;
-    }
-    // Disconnect from the server
-    function disconnect() {
-        socket.disconnect();
-    }
-
-</script>
+ <script src="//cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+<script src="../static/chat.js"></script>
 </body>
 </html>
