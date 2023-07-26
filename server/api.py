@@ -1,3 +1,4 @@
+# api.py - API file
 import flask
 import rsa
 import aes
@@ -63,130 +64,91 @@ def chat():
     username = flask.session.get("username")
     if not username:
         return flask.jsonify({"error": "User not logged in."})
-    
-    client_public_key_data = flask.session.get("client_public_key")
-    if not client_public_key_data:
-        return flask.jsonify({"error": "Client public key not found in session."})
 
-    client_public_key = rsa.PublicKey.load_pkcs1(client_public_key_data.encode())
-    client_public_keys[username] = client_public_key
+    # Parse the JSON data from the request
+    data = flask.request.json
 
-    if flask.request.method == "POST":
-        try:
-            data = flask.request.get_json()
+    if not data or "messages" not in data:
+        return flask.jsonify({"error": "Invalid data."})
 
-            if not isinstance(data, list):
-                raise ValueError("Invalid JSON data. Expected a list.")
+    messages = data["messages"]
 
-            messages = []
-            for message in data:
-                if not isinstance(message, dict) or "text" not in message:
-                    raise ValueError("Invalid message format.")
-
-                message_text = message["text"]
-
-                # Encrypt the messages with the client's public key
-                encrypted_messages = encrypt_messages(username, message_text)
-                messages.extend(encrypted_messages)
-
-            # Broadcast the encrypted message to all connected clients
-            for client in connected_clients:
-                if client.username in client_public_keys:
-                    # Encrypt the messages with the client's public key before sending
-                    encrypted_messages = encrypt_messages(client.username, messages)
-                    client.send(flask.jsonify({"data": encrypted_messages}).data)
-
-            return flask.jsonify({"success": True})
-
-        except ValueError as e:
-            return flask.jsonify({"error": str(e)})
-        
-    elif flask.request.method == "GET":
-        # Handle the GET request
-        return flask.jsonify({"info": "Chat is active."})
-    else:
-        return flask.jsonify({"error": "Method not allowed."}), 405
-    
-
-@app.route("/api/connect", methods=["POST"])
-def connect():
-    """
-    This endpoint establishes a WebSocket connection and adds the client to the set of connected clients.
-    It then starts receiving messages from the client, and for each received message, 
-    it calls the chat function to process and broadcast the message to all connected clients.
-    """
-    # Get the WebSocket connection from the request
-    ws = flask.request.environ.get("wsgi.websocket")
-
-    # Check if a WebSocket connection is established
-    if ws:
-        # Add the client to the set of connected clients
-        connected_clients.add(ws)
-        ws.username = flask.session.get("username")  # Store the username in the WebSocket object
-
-        # Start receiving messages from the client
-        while True:
-            data = ws.receive()
-            if data:
-                # Process and broadcast the received message to all connected clients
-                # messages = json.loads(data)["messages"]
-                # handle_received_messages(ws.username, messages)  # Process and broadcast the received messages
-                username = data["username"]
-                ws.username = username # Store the username in the WebSocket object
-                print(f"WebSocket connection established for user: {username}")
-    return flask.jsonify({"success": True})
-
-
-def handle_received_messages(sender_username, messages):
-    # Encrypt the message with the senders username
-    encrypted_messages = encrypt_messages(sender_username, messages)
-
-    # Broadcast the encrypted messages to all connected clients
-    for client in connected_clients:
-        if client.username in client_public_keys:
-            client.send(flask.jsonify({"data": encrypted_messages}).data)
-
-
-@app.route("/api/disconnect", methods=["POST"])
-def disconnect():
-    """
-    This endpoint removes the WebSocket client from the set of connected clients.
-    """
-    # Get the WebSocket connection from the request
-    ws = flask.request.environ.get("wsgi.websocket")
-
-    # Remove the client from the set of connected clients
-    if ws in connected_clients:
-        connected_clients.remove(ws)
-    return flask.jsonify({"success": True})
-
-def encrypt_messages(username, messages):
-    encrypted_messages = []
-    client_public_key = client_public_keys.get(username)
-    if not client_public_key:
-        raise ValueError("Client public key not found for username: " + username)
+    # Validate the data
+    if not isinstance(messages, list):
+        return flask.jsonify({"error": "Invalid data format."})
 
     for message in messages:
-        session_key = aes.generate_key()
-        message_ciphertext = aes.encrypt(message["text"].encode(), session_key)
-        message_signature = rsa.sign(message_ciphertext, server_private_key)
+        if "sender" not in message or "text" not in message or "timestamp" not in message:
+            return flask.jsonify({"error": "Invalid message format."})
 
-        # Encrypt the session key using the client's public key
-        encrypted_session_key = rsa.encrypt(session_key, client_public_key)
+    # Add the sender username to each message
+    for message in messages:
+        message["sender"] = username
 
-        encrypted_messages.append({
-            "sender": message["sender"],
-            "text": message["text"],
-            "ciphertext": message_ciphertext.decode(),
-            "signature": message_signature.decode(),
-            "encrypted_session_key": encrypted_session_key.decode(),
-            "timestamp": datetime.now(timezone.utc).replace(microsecond=0).isoformat()
-        })
+    # Add a timestamp to each message
+    for message in messages:
+        message["timestamp"] = datetime.now(timezone.utc).astimezone().isoformat()
 
-    return encrypted_messages
+    # Broadcast the messages to all connected clients
+    broadcast(messages)
 
+    return flask.jsonify({"status": "Message sent successfully!"})
+
+
+@app.route("/api/connected_clients")
+def get_connected_clients():
+    """
+    Get the list of currently connected clients.
+    """
+    return flask.jsonify(list(connected_clients))
+
+
+@app.route("/api/public_key", methods=["POST"])
+def receive_public_key():
+    """
+    Receive and store the public key of the connected client.
+    """
+    data = flask.request.json
+    if "username" in data and "public_key" in data:
+        username = data["username"]
+        public_key = data["public_key"]
+        client_public_keys[username] = public_key
+        return flask.jsonify({"status": "Public key received successfully!"})
+    else:
+        return flask.jsonify({"error": "Invalid data format."})
+
+
+@app.route("/api/encrypt_message", methods=["POST"])
+def encrypt_message():
+    """
+    Encrypt a message using the public key of the recipient.
+    """
+    data = flask.request.json
+    if "recipient" in data and "message" in data:
+        recipient = data["recipient"]
+        message = data["message"]
+
+        if recipient not in client_public_keys:
+            return flask.jsonify({"error": "Recipient public key not found."})
+
+        # Load the recipient's public key
+        public_key = rsa.PublicKey.load_pkcs1(client_public_keys[recipient].encode())
+
+        # Encrypt the message using the recipient's public key
+        encrypted_message = aes.encrypt(message.encode(), public_key)
+
+        return flask.jsonify({"encrypted_message": encrypted_message.decode()})
+    else:
+        return flask.jsonify({"error": "Invalid data format."})
+
+
+def broadcast(messages):
+    """
+    Broadcast messages to all connected clients.
+    """
+    for client in connected_clients:
+        client.send(json.dumps(messages))
 
 
 if __name__ == "__main__":
-    server_private_key = rsa.newkeys(512)[1]
-    app.run(debug=True, host="0.0.0.0", port=8000)
+    app.run(host='0.0.0.0', port=8000)

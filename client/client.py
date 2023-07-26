@@ -1,3 +1,5 @@
+# client.py - flask routing instance
+
 from flask import Flask, render_template, request, session, flash, redirect, current_app, json
 import requests
 from datetime import datetime
@@ -71,78 +73,52 @@ def chat():
 
     return render_template('chat.html', current_user=current_user)
 
-# Function to encrypt the message with the server's public key
-def encrypt_message(message):
-    server_public_key_data = session['server_public_key']
-    server_public_key = rsa.PublicKey.load_pkcs1(server_public_key_data.encode())
-    session_key = aes.generate_key()
-    ciphertext = aes.encrypt(message.encode(), session_key)
 
-    # Use base64 encoding to convert bytes to a string
-    encrypted_session_key = base64.b64encode(rsa.encrypt(session_key, server_public_key)).decode()
-    encrypted_message = {
-        "ciphertext": base64.b64encode(ciphertext).decode(),
-        "encrypted_session_key": encrypted_session_key
-    }
-
-    return json.dumps(encrypted_message)
-
-# decrypt message.
-def decrypt_message_with_client_key(ciphertext, encrypted_session_key):
-    client_private_key_data = session['client_private_key']
-    client_private_key = rsa.PrivateKey.load_pkcs1(client_private_key_data.encode())
-
-    # Use base64 decoding to convert the encrypted_session_key back to bytes
-    encrypted_session_key_bytes = base64.b64decode(encrypted_session_key.encode())
-
-    session_key = rsa.decrypt(encrypted_session_key_bytes, client_private_key)
-    decrypted_message = aes.decrypt(base64.b64decode(ciphertext.encode()), session_key)
-    return decrypted_message.decode()
-
-@socketio.on('user_connect')
+@socketio.on()
 def handle_connect():
     print("Client connected")
 
 
 @socketio.on('message')
 def handle_message(data):
-    message = data['message']
+    message = data['messages']
     print("Received encrypted message:", message)
 
     # Decrypt the message using the client's private key
-    decrypted_message = decrypt_message_with_client_key(message['ciphertext'], message['encrypted_session_key'])
-    print("Decrypted message:", decrypted_message)
+    decrypted_messages = decrypt_messages(data['messages'])
+    print("Decrypted messages:", decrypted_messages)
 
     # Broadcast the decrypted message to all connected clients
     socketio.emit('send_message', {
         'sender': session['username'],
-        'text': decrypted_message,
+        'messages': decrypted_messages,
         'timestamp': datetime.now().isoformat()
     })
+
 
 @socketio.on('disconnect')
 def handle_disconnect():
     print("Client disconnected")
 
-def encrypt_messages_with_server_key(messages):
-    encrypted_data = []
-    for message in messages:
-        encrypted_message = encrypt_message_with_server_key(message["text"])
-        encrypted_data.append({"text": encrypted_message})
-    return encrypted_data
 
-def encrypt_message_with_server_key(message):
-    server_public_key_data = session['server_public_key']
-    server_public_key = rsa.PublicKey.load_pkcs1(server_public_key_data)
-    session_key = aes.generate_key()
-    ciphertext = aes.encrypt(message.encode(), session_key)
-    encrypted_session_key = rsa.encrypt(session_key, server_public_key)
-    encrypted_message = {
-        "ciphertext": ciphertext,
-        "encrypted_session_key": encrypted_session_key
-    }
-    return json.dumps(encrypted_message)
+def decrypt_messages(encrypted_messages):
+    client_private_key_data = session['client_private_key']
+    client_private_key = rsa.PrivateKey.load_pkcs1(client_private_key_data.encode())
 
+    decrypted_messages = []
+    for message in encrypted_messages:
+        encrypted_session_key_bytes = base64.b64decode(message["encrypted_session_key"].encode())
+        session_key = rsa.decrypt(encrypted_session_key_bytes, client_private_key)
+        ciphertext = base64.b64decode(message["ciphertext"].encode())
+        decrypted_message = aes.decrypt(ciphertext, session_key).decode()
+
+        decrypted_messages.append({
+            "sender": message["sender"],
+            "text": decrypted_message,
+            "timestamp": message["timestamp"]
+        })
+
+    return decrypted_messages
 
 
 if __name__ == '__main__':
