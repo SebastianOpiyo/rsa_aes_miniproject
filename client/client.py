@@ -99,7 +99,7 @@ def decrypt_message_with_client_key(ciphertext, encrypted_session_key):
     decrypted_message = aes.decrypt(base64.b64decode(ciphertext.encode()), session_key)
     return decrypted_message.decode()
 
-@socketio.on('connect')
+@socketio.on('user_connect')
 def handle_connect():
     print("Client connected")
 

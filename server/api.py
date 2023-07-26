@@ -129,9 +129,11 @@ def connect():
             data = ws.receive()
             if data:
                 # Process and broadcast the received message to all connected clients
-                messages = json.loads(data)["messages"]
-                handle_received_messages(ws.username, messages)  # Process and broadcast the received messages
-
+                # messages = json.loads(data)["messages"]
+                # handle_received_messages(ws.username, messages)  # Process and broadcast the received messages
+                username = data["username"]
+                ws.username = username # Store the username in the WebSocket object
+                print(f"WebSocket connection established for user: {username}")
     return flask.jsonify({"success": True})
 
 
