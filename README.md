@@ -13,6 +13,40 @@ The server-side application is built using Flask and uses RSA and AES for secure
 - `aes`: A Python Advanced Encryption Standard (AES) cryptography module.
 - `flask_wtf.csrf`: Cross-Site Request Forgery (CSRF) protection for Flask applications.
 
+## System Design Diagram
+
+```mermaid
+sequenceDiagram
+    participant User as User Interface
+    participant Client as Client App
+    participant Server as Server App
+    Note over User,Client: User enters username and password
+    User->>Client: Login
+    Client->>Server: Send login details
+    alt successful login
+        Server-->>Client: Send back RSA keys
+        Client-->>User: Show success message
+    else unsuccessful login
+        Server-->>Client: Send back error message
+        Client-->>User: Show error message
+    end
+    Note over User,Client: User writes a message
+    User->>Client: Submit message
+    Client->>Server: Send message data
+    alt successful message sent
+        Server-->>Client: Message delivered
+        Client->>User: Update chat interface
+    else unsuccessful message sent
+        Server-->>Client: Send back error message
+        Client-->>User: Show error message
+    end
+    Note over User,Client: User decides to logout/disconnect
+    User->>Client: Disconnect
+    Client->>Server: Send disconnect request
+    Server-->>Client: Acknowledge disconnect
+    Client-->>User: Show disconnection success message
+``````
+
 ### Routes
 The server application has five main routes:
 

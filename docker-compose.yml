@@ -25,7 +25,7 @@ services:
     depends_on:
       - server
     ports:
-      - '5000:5000'
+      - '9000:5000'
     networks:
       - chatnetwork
       
